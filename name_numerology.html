@@ -267,7 +267,6 @@ function renderNameResult(surname, given){
   html += `<tr><td>外格</td><td>${r.wai}</td><td>${wxTag(r.wai)}</td></tr>`;
   html += `<tr><td>总格</td><td>${r.zong}</td><td>${wxTag(r.zong)}</td></tr>`;
   html += '</table>';
-  html += `<p class="sancai">三才：${wuxing(r.tian)} · ${wuxing(r.ren)} · ${wuxing(r.di)}</p>`;
   outEl.innerHTML = html;
 }
 
@@ -379,18 +378,9 @@ function renderYearResult(year, month, day){
   const gz = yearGanzhi(solarYear);
   const [nayinName, nayinWx] = yearNayin(solarYear);
   const tgWx = TIANGAN_WX[gz.ganIdx];
-  const lichunStr = `${lichun.year}-${String(lichun.month).padStart(2,"0")}-${String(lichun.day).padStart(2,"0")} ${lichun.hour.toFixed(1)}时`;
 
   let html = '<div class="year-result">';
-  if(month === null){
-    html += `<div class="line"><span class="label">立春（${year}年，北京时间）</span>${lichunStr}</div>`;
-  } else if(adjusted){
-    html += `<div class="line"><span class="label">立春（${year}年，北京时间）</span>${lichunStr}</div>`;
-    html += `<div class="line"><span class="label">已换年</span>${year}年${month}月${day}日在当年立春之前，按 ${solarYear} 年计算</div>`;
-  } else {
-    html += `<div class="line"><span class="label">立春（${year}年，北京时间）</span>${lichunStr}</div>`;
-    html += `<div class="line"><span class="label">已在立春之后</span>仍按 ${solarYear} 年计算</div>`;
-  }
+  html += `<div class="line"><span class="label">出生年</span>${solarYear}</div>`;
   html += `<div class="line"><span class="label">干支</span>${gz.gan}${gz.zhi}年</div>`;
   html += `<div class="line"><span class="label">纳音五行</span>${nayinName} ${wxTag2(nayinWx)}</div>`;
   html += `<div class="line"><span class="label">天干五行（简化）</span>${gz.gan} ${wxTag2(tgWx)}</div>`;
