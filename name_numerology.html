@@ -183,7 +183,6 @@ footer{
   <p class="sub">康熙笔画 · 五格三才 · 出生年五行 — 逐步演算，非最终定论</p>
 
   <div class="panel">
-    <h2><span class="mark">壹</span>姓名笔画与五格</h2>
     <div class="row">
       <div class="field">
         <label for="surname">姓（繁体）</label>
@@ -193,15 +192,7 @@ footer{
         <label for="given">名（繁体）</label>
         <input type="text" id="given" placeholder="例：茂豐">
       </div>
-      <button id="calcName">计算</button>
     </div>
-    <div id="nameError" class="err"></div>
-    <div id="nameOutput"></div>
-    <p class="note">笔画数据取自 Unicode Unihan（kRSKangXi 字段），对应《康熙字典》部首与部外笔画。请先手动转换为繁体字再输入；一字多繁体时（如「后／後」）请自行判断用字。</p>
-  </div>
-
-  <div class="panel">
-    <h2><span class="mark">貳</span>出生年五行</h2>
     <div class="row">
       <div class="field">
         <label for="birthyear">出生年（公历）</label>
@@ -215,15 +206,15 @@ footer{
         <label for="birthday">日（可选）</label>
         <input type="number" id="birthday" placeholder="1–31" inputmode="numeric" min="1" max="31">
       </div>
-      <button id="calcYear">计算</button>
     </div>
-    <div id="yearOutput"></div>
-    <p class="note">已按立春换年：本工具用天文公式（低精度太阳视黄经，Meeus 算法）现算立春的北京时间，不查表、不联网。只输入年份时按公历年计算，不做立春换算；补上月、日后，1 月与 2 月上旬出生者会自动换算到立春前一年。算法忽略了地球自转的微小修正（ΔT），可能带来几分钟误差，只在生辰恰好卡在立春当天时才需要人工核对准确时刻。纳音五行为传统排法，天干五行为简化对照，二者用途不同，仅供参考。</p>
-  </div>
+    <div class="row">
+      <button id="calcAll">计算</button>
+    </div>
+    <div id="formError" class="err"></div>
 
-  <footer>
-    v0.1 · 数据与算法均可能有误，重要决定前请与其他来源核对。后续计划加入三才生克、大运分段等分析。
-  </footer>
+    <div id="nameOutput"></div>
+    <div id="yearOutput"></div>
+  </div>
 </div>
 
 <script>
@@ -261,24 +252,9 @@ function analyzeName(surname, given){
   return {info, tian, ren, di, wai, zong};
 }
 
-document.getElementById("calcName").addEventListener("click", () => {
-  const surname = document.getElementById("surname").value.trim();
-  const given = document.getElementById("given").value.trim();
-  const errEl = document.getElementById("nameError");
+function renderNameResult(surname, given){
   const outEl = document.getElementById("nameOutput");
-  errEl.textContent = "";
-  outEl.innerHTML = "";
-  if(!surname || !given){
-    errEl.textContent = "请输入姓和名。";
-    return;
-  }
-  let r;
-  try{
-    r = analyzeName(surname, given);
-  }catch(e){
-    errEl.textContent = e.message;
-    return;
-  }
+  const r = analyzeName(surname, given);
   let html = '<div class="charstrokes">';
   for(const [ch,s] of r.info){
     html += `<div class="cs-item"><span class="ch">${ch}</span><span class="n">${s} 画</span></div>`;
@@ -293,7 +269,7 @@ document.getElementById("calcName").addEventListener("click", () => {
   html += '</table>';
   html += `<p class="sancai">三才：${wuxing(r.tian)} · ${wuxing(r.ren)} · ${wuxing(r.di)}</p>`;
   outEl.innerHTML = html;
-});
+}
 
 // ---- 出生年五行 ----
 const TIANGAN = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
@@ -397,24 +373,8 @@ function solarYearOf(year, month, day){
   return {solarYear, adjusted: solarYear !== year, lichun};
 }
 
-document.getElementById("calcYear").addEventListener("click", () => {
-  const val = document.getElementById("birthyear").value;
-  const mVal = document.getElementById("birthmonth").value;
-  const dVal = document.getElementById("birthday").value;
+function renderYearResult(year, month, day){
   const outEl = document.getElementById("yearOutput");
-  outEl.innerHTML = "";
-  const year = parseInt(val, 10);
-  if(!val || isNaN(year)){
-    outEl.innerHTML = '<p class="err">请输入公历年份。</p>';
-    return;
-  }
-  const month = mVal ? parseInt(mVal,10) : null;
-  const day = dVal ? parseInt(dVal,10) : null;
-  if((mVal && !dVal) || (!mVal && dVal)){
-    outEl.innerHTML = '<p class="err">月、日请同时填写，或都留空。</p>';
-    return;
-  }
-
   const {solarYear, adjusted, lichun} = solarYearOf(year, month, day);
   const gz = yearGanzhi(solarYear);
   const [nayinName, nayinWx] = yearNayin(solarYear);
@@ -424,7 +384,6 @@ document.getElementById("calcYear").addEventListener("click", () => {
   let html = '<div class="year-result">';
   if(month === null){
     html += `<div class="line"><span class="label">立春（${year}年，北京时间）</span>${lichunStr}</div>`;
-    html += `<div class="line note" style="margin:0;">未填月日，按公历年直接计算，未做立春换年。</div>`;
   } else if(adjusted){
     html += `<div class="line"><span class="label">立春（${year}年，北京时间）</span>${lichunStr}</div>`;
     html += `<div class="line"><span class="label">已换年</span>${year}年${month}月${day}日在当年立春之前，按 ${solarYear} 年计算</div>`;
@@ -437,8 +396,46 @@ document.getElementById("calcYear").addEventListener("click", () => {
   html += `<div class="line"><span class="label">天干五行（简化）</span>${gz.gan} ${wxTag2(tgWx)}</div>`;
   html += '</div>';
   outEl.innerHTML = html;
-});
+}
 function wxTag2(w){ return `<span class="wx wx-${w}">${w}</span>`; }
+
+document.getElementById("calcAll").addEventListener("click", () => {
+  const surname = document.getElementById("surname").value.trim();
+  const given = document.getElementById("given").value.trim();
+  const yVal = document.getElementById("birthyear").value;
+  const mVal = document.getElementById("birthmonth").value;
+  const dVal = document.getElementById("birthday").value;
+  const errEl = document.getElementById("formError");
+  const nameOut = document.getElementById("nameOutput");
+  const yearOut = document.getElementById("yearOutput");
+  errEl.textContent = "";
+  nameOut.innerHTML = "";
+  yearOut.innerHTML = "";
+
+  if(!surname || !given){
+    errEl.textContent = "请输入姓和名。";
+    return;
+  }
+  const year = parseInt(yVal, 10);
+  if(!yVal || isNaN(year)){
+    errEl.textContent = "请输入公历出生年。";
+    return;
+  }
+  if((mVal && !dVal) || (!mVal && dVal)){
+    errEl.textContent = "月、日请同时填写，或都留空。";
+    return;
+  }
+  const month = mVal ? parseInt(mVal,10) : null;
+  const day = dVal ? parseInt(dVal,10) : null;
+
+  try{
+    renderNameResult(surname, given);
+  }catch(e){
+    errEl.textContent = e.message;
+    return;
+  }
+  renderYearResult(year, month, day);
+});
 </script>
 </body>
 </html>
