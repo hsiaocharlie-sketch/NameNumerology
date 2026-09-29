@@ -223,7 +223,7 @@ footer{
     <div class="row">
       <div class="field">
         <label for="birthyear">出生年（公历）</label>
-        <input type="number" id="birthyear" placeholder="例：1991" inputmode="numeric">
+        <input type="number" id="birthyear" placeholder="例：1990" inputmode="numeric">
       </div>
       <div class="field">
         <label for="birthmonth">月（可选）</label>
@@ -433,11 +433,22 @@ function relation(w1, w2){
   if(KE[w2] === w1) return {type:"ke", from:1};
   return {type:"none"};
 }
+const AGE_RANGES = {
+  "天格": "1-12 / 61-72",
+  "地格": "13-24 / 73-84",
+  "人格": "25-36 / 85-96",
+  "外格": "37-48 / 97-108",
+  "总格": "49-60 / 109-120",
+};
 function renderHexagon(nodes){
-  const cx=200, cy=200, r=150;
+  const cx=230, cy=230, r=150, nodeR=30;
   const pts = nodes.map((n,i)=>{
     const rad = (-90 + i*60) * Math.PI/180;
-    return {x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad), label:n.label, wx:n.wx};
+    return {
+      x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad),
+      capX: cx + (r+48)*Math.cos(rad), capY: cy + (r+48)*Math.sin(rad),
+      label:n.label, wx:n.wx, age: AGE_RANGES[n.label] || null,
+    };
   });
   const defs = `<defs>
     <marker id="arrow-sheng" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -462,8 +473,8 @@ function renderHexagon(nodes){
       const dx = to.x-from.x, dy = to.y-from.y;
       const dist = Math.sqrt(dx*dx+dy*dy) || 1;
       const ux = dx/dist, uy = dy/dist;
-      const fx = from.x + ux*34, fy = from.y + uy*34;
-      const tx = to.x - ux*36, ty = to.y - uy*36;
+      const fx = from.x + ux*(nodeR+2), fy = from.y + uy*(nodeR+2);
+      const tx = to.x - ux*(nodeR+4), ty = to.y - uy*(nodeR+4);
       const marker = rel.type==="sheng" ? "arrow-sheng" : "arrow-ke";
       const color = rel.type==="sheng" ? "var(--sheng)" : "var(--ke)";
       const dash = rel.type==="ke" ? ' stroke-dasharray="6,4"' : "";
@@ -473,13 +484,14 @@ function renderHexagon(nodes){
   let nodesSvg = "";
   for(const p of pts){
     nodesSvg += `<g>
-      <circle cx="${p.x}" cy="${p.y}" r="32" fill="var(--${WX_VARNAME[p.wx]})"/>
+      <circle cx="${p.x}" cy="${p.y}" r="${nodeR}" fill="var(--${WX_VARNAME[p.wx]})"/>
       <text x="${p.x}" y="${p.y-5}" text-anchor="middle" font-size="12.5" fill="var(--paper)" font-family="'Noto Sans SC',sans-serif">${p.label}</text>
       <text x="${p.x}" y="${p.y+15}" text-anchor="middle" font-size="16" fill="var(--paper)" font-family="'Noto Serif SC',serif" font-weight="700">${p.wx}</text>
+      ${p.age ? `<text x="${p.capX}" y="${p.capY}" text-anchor="middle" font-size="10.5" fill="var(--ink-soft)" font-family="'Noto Sans SC',sans-serif">${p.age}</text>` : ""}
     </g>`;
   }
   const legend = `<div class="hex-legend"><span><i class="dot sheng"></i>相生</span><span><i class="dot ke"></i>相克</span><span><i class="dot bi"></i>比和</span></div>`;
-  return `<svg viewBox="0 0 400 400" width="100%" style="max-width:420px;display:block;margin:.4rem auto 0;">${defs}${lines}${nodesSvg}</svg>${legend}`;
+  return `<svg viewBox="0 0 460 460" width="100%" style="max-width:460px;display:block;margin:.4rem auto 0;">${defs}${lines}${nodesSvg}</svg>${legend}`;
 }
 
 document.getElementById("calcAll").addEventListener("click", () => {
@@ -527,8 +539,8 @@ document.getElementById("calcAll").addEventListener("click", () => {
     {label:"天格", wx: wuxing(r.tian)},
     {label:"人格", wx: wuxing(r.ren)},
     {label:"地格", wx: wuxing(r.di)},
-    {label:"外格", wx: wuxing(r.wai)},
     {label:"总格", wx: wuxing(r.zong)},
+    {label:"外格", wx: wuxing(r.wai)},
   ];
   hexOut.innerHTML = renderHexagon(nodes);
 });
