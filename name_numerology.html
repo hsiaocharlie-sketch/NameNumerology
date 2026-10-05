@@ -440,13 +440,17 @@ const AGE_RANGES = {
   "外格": "37-48 / 97-108",
   "总格": "49-60 / 109-120",
 };
+const AGE_ABOVE = {"天格":true, "外格":true};
 function renderHexagon(nodes){
-  const cx=230, cy=230, r=150, nodeR=30;
+  const cx=230, cy=230, r=150, nodeR=30, gap=16;
   const pts = nodes.map((n,i)=>{
     const rad = (-90 + i*60) * Math.PI/180;
+    const x = cx + r*Math.cos(rad), y = cy + r*Math.sin(rad);
+    const above = !!AGE_ABOVE[n.label];
     return {
-      x: cx + r*Math.cos(rad), y: cy + r*Math.sin(rad),
-      capX: cx + (r+48)*Math.cos(rad), capY: cy + (r+48)*Math.sin(rad),
+      x, y,
+      capX: x,
+      capY: above ? (y - nodeR - gap) : (y + nodeR + gap + 10),
       label:n.label, wx:n.wx, age: AGE_RANGES[n.label] || null,
     };
   });
