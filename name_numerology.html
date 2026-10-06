@@ -223,7 +223,7 @@ footer{
     <div class="row">
       <div class="field">
         <label for="birthyear">出生年（公历）</label>
-        <input type="number" id="birthyear" placeholder="例：1991" inputmode="numeric">
+        <input type="number" id="birthyear" placeholder="例：1990" inputmode="numeric">
       </div>
       <div class="field">
         <label for="birthmonth">月（可选）</label>
@@ -442,7 +442,7 @@ const AGE_RANGES = {
 };
 const AGE_ABOVE = {"天格":true, "外格":true};
 function renderHexagon(nodes){
-  const cx=230, cy=230, r=150, nodeR=30, gap=16;
+  const cx=230, cy=230, r=150, nodeR=30, gap=4;
   const pts = nodes.map((n,i)=>{
     const rad = (-90 + i*60) * Math.PI/180;
     const x = cx + r*Math.cos(rad), y = cy + r*Math.sin(rad);
