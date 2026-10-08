@@ -273,11 +273,18 @@ footer{
         <label for="given">名（繁体）</label>
         <input type="text" id="given" placeholder="例：無忌">
       </div>
+      <div class="field">
+        <label for="gender">性别</label>
+        <select id="gender">
+          <option value="male">男</option>
+          <option value="female">女</option>
+        </select>
+      </div>
     </div>
     <div class="row">
       <div class="field">
         <label for="birthyear">出生年（公历）</label>
-        <input type="number" id="birthyear" placeholder="例：1993" inputmode="numeric">
+        <input type="number" id="birthyear" placeholder="例：1990" inputmode="numeric">
       </div>
       <div class="field">
         <label for="birthmonth">月（可选）</label>
@@ -313,9 +320,12 @@ const NUM_MEANINGS = ["", "（太极之数）太极之数，万物开泰，生�
 
 const WUXING_BY_DIGIT = {1:"木",2:"木",3:"火",4:"火",5:"土",6:"土",7:"金",8:"金",9:"水",0:"水"};
 function wuxing(n){ return WUXING_BY_DIGIT[((n%10)+10)%10]; }
+function yinyangGe(n){ return (Math.abs(n) % 2 === 1) ? "阳" : "阴"; }
+function yinyangYear(y){ return (Math.abs(y) % 2 === 1) ? "阴" : "阳"; }
 function wxTag(n){
   const w = wuxing(n);
-  return `<span class="wx wx-${w}">${w}</span>`;
+  const yy = yinyangGe(n);
+  return `<span class="wx wx-${w}">${yy}${w}</span>`;
 }
 
 function charStrokes(ch){
@@ -366,7 +376,9 @@ function analyzeName(surname, given){
 function wxFormula(num){
   const d = ((num % 10) + 10) % 10;
   const w = wuxing(num);
-  return `${num} 的尾数是 ${d} → ${w}\n\n尾数对照：1、2 → 木　3、4 → 火　5、6 → 土　7、8 → 金　9、0 → 水`;
+  const yy = yinyangGe(num);
+  const parity = (Math.abs(num) % 2 === 1) ? "单数" : "双数";
+  return `${num} 的尾数是 ${d} → ${w}\n\n尾数对照：1、2 → 木　3、4 → 火　5、6 → 土　7、8 → 金　9、0 → 水\n\n${num} 是${parity} → ${yy}\n\n五格阴阳：单数为阳，双数为阴`;
 }
 
 function numMeaning(n){
@@ -502,16 +514,17 @@ function renderYearResult(year, month, day){
   const {solarYear} = solarYearOf(year, month, day);
   const gz = yearGanzhi(solarYear);
   const [nayinName, nayinWx] = yearNayin(solarYear);
+  const yy = yinyangYear(solarYear);
 
   let html = '<div class="year-result">';
   html += `<div class="line"><span class="label">出生年</span>${solarYear}</div>`;
   html += `<div class="line"><span class="label">干支</span>${gz.gan}${gz.zhi}年</div>`;
-  html += `<div class="line"><span class="label">纳音五行</span>${nayinName} ${wxTag2(nayinWx)}</div>`;
+  html += `<div class="line"><span class="label">纳音五行</span>${nayinName} ${wxTag2(nayinWx, yy)}</div>`;
   html += '</div>';
   outEl.innerHTML = html;
-  return nayinWx;
+  return {nayinWx, solarYear, yy};
 }
-function wxTag2(w){ return `<span class="wx wx-${w}">${w}</span>`; }
+function wxTag2(w, yy){ return `<span class="wx wx-${w}">${yy || ""}${w}</span>`; }
 
 // ---- 五行生克六边形 ----
 const WX_VARNAME = {"木":"wood","火":"fire","土":"earth","金":"metal","水":"water"};
@@ -533,17 +546,26 @@ const AGE_RANGES = {
   "总格": "49-60 / 109-120",
 };
 const AGE_ABOVE = {"天格":true, "外格":true};
-function renderHexagon(nodes){
+const REL_LABELS = {
+  male:   {"天格":"父母、领导","人格":"内在个性","地格":"妻子、子女","外格":"人际关系","总格":"外在行为"},
+  female: {"天格":"丈夫、父母、领导","人格":"内在个性","地格":"子女","外格":"人际关系","总格":"外在行为"},
+};
+function renderHexagon(nodes, gender){
   const cx=230, cy=230, r=150, nodeR=30, gap=4;
+  const relMap = REL_LABELS[gender] || null;
   const pts = nodes.map((n,i)=>{
     const rad = (-90 + i*60) * Math.PI/180;
     const x = cx + r*Math.cos(rad), y = cy + r*Math.sin(rad);
     const above = !!AGE_ABOVE[n.label];
+    const capY = above ? (y - nodeR - gap) : (y + nodeR + gap + 10);
+    const rel = relMap ? (relMap[n.label] || null) : null;
+    const relY = rel ? (above ? (capY - 13) : (capY + 13)) : null;
     return {
       x, y,
       capX: x,
-      capY: above ? (y - nodeR - gap) : (y + nodeR + gap + 10),
-      label:n.label, wx:n.wx, age: AGE_RANGES[n.label] || null,
+      capY,
+      relY,
+      label:n.label, wx:n.wx, yy:n.yy, age: AGE_RANGES[n.label] || null, rel,
     };
   });
   const defs = `<defs>
@@ -582,8 +604,9 @@ function renderHexagon(nodes){
     nodesSvg += `<g>
       <circle cx="${p.x}" cy="${p.y}" r="${nodeR}" fill="var(--${WX_VARNAME[p.wx]})"/>
       <text x="${p.x}" y="${p.y-5}" text-anchor="middle" font-size="12.5" fill="var(--paper)" font-family="'Noto Sans SC',sans-serif">${p.label}</text>
-      <text x="${p.x}" y="${p.y+15}" text-anchor="middle" font-size="16" fill="var(--paper)" font-family="'Noto Serif SC',serif" font-weight="700">${p.wx}</text>
+      <text x="${p.x}" y="${p.y+15}" text-anchor="middle" font-size="16" fill="var(--paper)" font-family="'Noto Serif SC',serif" font-weight="700">${p.yy || ""}${p.wx}</text>
       ${p.age ? `<text x="${p.capX}" y="${p.capY}" text-anchor="middle" font-size="10.5" fill="var(--ink-soft)" font-family="'Noto Sans SC',sans-serif">${p.age}</text>` : ""}
+      ${p.rel ? `<text x="${p.capX}" y="${p.relY}" text-anchor="middle" font-size="10.5" fill="var(--ink-soft)" font-family="'Noto Sans SC',sans-serif">${p.rel}</text>` : ""}
     </g>`;
   }
   const legend = `<div class="hex-legend"><span><i class="dot sheng"></i>相生</span><span><i class="dot ke"></i>相克</span><span><i class="dot bi"></i>比和</span></div>`;
@@ -628,17 +651,18 @@ document.getElementById("calcAll").addEventListener("click", () => {
     errEl.textContent = e.message;
     return;
   }
-  const nayinWx = renderYearResult(year, month, day);
+  const {nayinWx, yy: yearYY} = renderYearResult(year, month, day);
+  const gender = document.getElementById("gender").value;
 
   const nodes = [
-    {label:"出生年", wx: nayinWx},
-    {label:"天格", wx: wuxing(r.tian)},
-    {label:"人格", wx: wuxing(r.ren)},
-    {label:"地格", wx: wuxing(r.di)},
-    {label:"总格", wx: wuxing(r.zong)},
-    {label:"外格", wx: wuxing(r.wai)},
+    {label:"出生年", wx: nayinWx, yy: yearYY},
+    {label:"天格", wx: wuxing(r.tian), yy: yinyangGe(r.tian)},
+    {label:"人格", wx: wuxing(r.ren), yy: yinyangGe(r.ren)},
+    {label:"地格", wx: wuxing(r.di), yy: yinyangGe(r.di)},
+    {label:"总格", wx: wuxing(r.zong), yy: yinyangGe(r.zong)},
+    {label:"外格", wx: wuxing(r.wai), yy: yinyangGe(r.wai)},
   ];
-  hexOut.innerHTML = renderHexagon(nodes);
+  hexOut.innerHTML = renderHexagon(nodes, gender);
 });
 
 // ---- 弹窗：点击数字或五行查看计算过程 ----
