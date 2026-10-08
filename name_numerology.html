@@ -730,10 +730,12 @@ document.getElementById("calcAll").addEventListener("click", () => {
   const nameOut = document.getElementById("nameOutput");
   const yearOut = document.getElementById("yearOutput");
   const hexOut = document.getElementById("hexOutput");
+  const analysisOut = document.getElementById("analysisOutput");
   errEl.textContent = "";
   nameOut.innerHTML = "";
   yearOut.innerHTML = "";
   hexOut.innerHTML = "";
+  analysisOut.innerHTML = "";
 
   if(!surname || !given){
     errEl.textContent = "请输入姓和名。";
@@ -770,6 +772,7 @@ document.getElementById("calcAll").addEventListener("click", () => {
     {label:"外格", wx: wuxing(r.wai), yy: yinyangGe(r.wai)},
   ];
   hexOut.innerHTML = renderHexagon(nodes, gender);
+  renderAnalysis(nodes, gender);
 });
 
 // ---- 弹窗：点击数字或五行查看计算过程 ----
